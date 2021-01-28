@@ -1,0 +1,24 @@
+PROGRAM=yaps
+PREFIX=/usr
+VERSION=0.4.23
+CONF=ymakepkg.conf
+HELPER=finddepends
+HELPERCODE=main.cpp
+FUNCTIONS=yapi
+
+all:
+	sed -r -i 's/[0-9]+.[0-9]+.[0-9]+/'"$(VERSION)"'/' $(CONF)
+	makeswitch -c $(CONF)
+	g++ -o $(HELPER) $(HELPERCODE)
+
+install:
+	sed -r -i 's/[0-9]+.[0-9]+.[0-9]+/'"$(VERSION)"'/' $(CONF)
+	makeswitch -c $(CONF)
+	g++ -o $(HELPER) $(HELPERCODE)
+	mkdir -p $(DESTDIR)$(PREFIX)/share/yinstal $(DESTDIR)$(PREFIX)/bin||true
+	cp $(FUNCTIONS) $(DESTDIR)$(PREFIX)/share/yinstal/
+	cp $(PROGRAM) $(HELPER) $(DESTDIR)$(PREFIX)/bin
+
+clean:
+	rm $(HELPER) || true
+

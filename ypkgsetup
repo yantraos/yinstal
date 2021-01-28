@@ -1,0 +1,259 @@
+#!/bin/bash -e
+
+#
+# ©ACSESTECH.............  raj.atmakuri@acsestech.com
+#
+# This file (ysetUp) is part of BootCD.
+#
+# BootCD is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# at your option) any later version.
+
+# BootCD is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with BootCD.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+LOCALyversion=9.0
+PIBUILD=0
+PIVERS=4
+USESYSTEMD=0
+
+#$1=varname $2=message
+readWithDefault ()
+{
+	local varname="$1"
+	local varcontents="${!varname}"
+	local message="$2"
+
+	read -e -p "$message [ ${varcontents} ] "
+	if [ "X$REPLY" != "X" ];then
+		eval "${varname}=\"$REPLY\""
+	fi
+}
+
+case $(uname -m) in
+	arm*)
+		PIBUILD=1
+		LIBDIRSUFFIX=""
+		;;
+
+	x86_64)
+		LIBDIRSUFFIX=64
+		;;
+	*)
+		LIBDIRSUFFIX=""
+		;;
+esac
+
+#set variables if possible
+if [ -e /etc/ypkg.rc ];then
+	. /etc/ypkg.rc
+else
+	yversion=$LOCALyversion
+	PIBUILD=$PIBUILD
+	PIVERS=$PIVERS
+	USESYSTEMD=$USESYSTEMD
+
+	LIBDIRSUFFIX=
+	BUILDSCRIPTS=/yinsource/
+	OUTPUT=ybpackages/$LOCALyversion
+	SOURCEARCHIVES=/ysarchives/$LOCALyversion
+	PKGARCHIVES=/ybpackages/$LOCALyversion
+	COMPILEAT=/ybpackages/$LOCALyversion
+	SCRIPTLOG=1
+
+	CONFIGOPTIONS="--prefix=/usr --sysconfdir=/etc --libexecdir=/usr/libexec --libdir=/usr/lib$LIBDIRSUFFIX --enable-gtk-doc --disable-debug --disable-nls --disable-static"
+	MESONCONFIGOPTIONS="--prefix=/usr --sysconfdir=/etc --libexecdir=/usr/libexec --libdir=/usr/lib$LIBDIRSUFFIX --buildtype=release --default-library=shared"
+	CHECKETC=1
+	MAKEFLAGS="-j1"
+
+	XORG_PREFIX=/usr
+	XORG_CONFIG="--prefix=/usr --sysconfdir=/etc --mandir=/usr/share/man --localstatedir=/var --disable-static"
+
+	JAVA_HOME="/opt/jdk"
+	#qt5 and cmake stuff
+	QT5PREFIX="/usr"
+	QT5DIR=$QT5PREFIX/lib${LIBDIRSUFFIX}/qt5
+	CMAKE_INSTALL_PREFIX="$QT5PREFIX"
+	CMAKE_PREFIX_PATH=$QT5DIR/cmake
+	PATH="${QT5DIR}:${PATH}"
+
+	DEFLIBSUFFIX=$LIBDIRSUFFIX
+	DEFUSEQT5=TRUE
+	DEFCMAKELINKERFLAGS="-L$QT5DIR"
+
+	CMAKEINSTALLPREFIX="-DCMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX"
+	CMAKEPREFIXPATH="-DCMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH"
+	CMAKELIBDIRSUFFIX="-DLIB_SUFFIX=$DEFLIBSUFFIX"
+	CMAKEUSEQT5="-DUSE_QT5=$DEFUSEQT5"
+	CMAKELDFLAGS="-DCMAKE_EXE_LINKER_FLAGS=$DEFCMAKELINKERFLAGS"
+
+	export CMAKE_PREFIX_PATH
+	export CMAKE_INSTALL_PREFIX
+	export PATH
+	export QT5DIR
+fi
+
+#Yantra Version
+yversion=${yversion:-"9.0"}
+readWithDefault "yversion" "Enter Version"
+
+#use systemd :(
+readWithDefault "USESYSTEMD" "Build with systemd support"
+
+#for rpi
+if [ $PIBUILD -eq 1 ];then
+	PIVERS=${PIVERS:-"4"}
+	readWithDefault "PIVERS" "Enter Pi Version"
+fi
+
+#libdir suffix
+readWithDefault "LIBDIRSUFFIX" "Enter Suffix For Lib Folders"
+
+#buildscripts location
+BUILDSCRIPTS="/yinsource/"
+readWithDefault "BUILDSCRIPTS" "Enter Folder For Build Scripts"
+
+#Folder for built pkgs
+OUTPUT=${OUTPUT:-"/ybpackages/$yversion"}
+readWithDefault "OUTPUT" "Enter Folder For Temporary Files"
+
+#Place to store downloaded source archives, defaults to /ysarchives/${yversion}
+SOURCEARCHIVES=${SOURCEARCHIVES:-"/ysarchives/${yversion}"}
+readWithDefault "SOURCEARCHIVES" "Enter Folder For Source Archives"
+
+#Place to store package archives, defaults to $OUTPUT
+PKGARCHIVES=${PKGARCHIVES:-"$OUTPUT"}
+readWithDefault "PKGARCHIVES" "Enter Folder For Built Package Archives"
+
+#compile at folder for large builds
+COMPILEAT=${COMPILEAT:-""}
+readWithDefault "COMPILEAT" "Compile In This Folder Instead Of In Pkg Folder"
+
+#log op from scripts
+SCRIPTLOG=${SCRIPTLOG:-1}
+readWithDefault "SCRIPTLOG" "Log Output From Scripts, 0 = Don't Log"
+
+#check /etc/ for config file clashes
+CHECKETC=${CHECKETC:-1}
+readWithDefault "CHECKETC" "Check /etc For Possible Config File Clashes, 0 = No Check"
+
+#general config options
+CONFIGOPTIONS=${CONFIGOPTIONS:-"--prefix=/usr --sysconfdir=/etc --libexecdir=/usr/libexec --libdir=/usr/lib${LIBDIRSUFFIX} --enable-gtk-doc --disable-debug --disable-nls --disable-static"}
+readWithDefault "CONFIGOPTIONS" "Enter Basic Options For \"configure\" Scripts"
+
+#config options for meson
+MESONCONFIGOPTIONS=${MESONCONFIGOPTIONS:-"--prefix=/usr --sysconfdir=/etc --libexecdir=/usr/libexec --libdir=/usr/lib$LIBDIRSUFFIX --buildtype=release --default-library=shared"}
+readWithDefault "MESONCONFIGOPTIONS" "Enter Basic Options For \"meson\" Scripts"
+
+#general purpose make flags
+MAKEFLAGS=${MAKEFLAGS:-" -j$(nproc) "}
+readWithDefault "MAKEFLAGS" "General Purpose Switches To Make"
+
+#xorg prefix
+XORG_PREFIX=${XORG_PREFIX:-"/usr"}
+oldprefix=$XORG_PREFIX
+readWithDefault "XORG_PREFIX" "Build Locattion For Xorg"
+
+#xorg configure options
+XORG_CONFIG=${XORG_CONFIG:-"--prefix=$XORG_PREFIX --sysconfdir=/etc --mandir=$XORG_PREFIX/share/man --localstatedir=/var --disable-static"}
+XORG_CONFIG=${XORG_CONFIG//$oldprefix/$XORG_PREFIX}
+readWithDefault "XORG_CONFIG" "Xorg Configure Options"
+
+#java home
+JAVA_HOME=${JAVA_HOME:-"/opt/jdk"}
+readWithDefault "JAVA_HOME" "Java Install Location"
+
+#qt5 and cmake stuff
+QT5PREFIX=${QT5PREFIX:-"/usr"}
+readWithDefault "QT5PREFIX" "Qt5 Install Location"
+
+echo "----SUMMARY----"
+echo 
+echo "yversion=$yversion"
+echo "PIBUILD=$PIBUILD"
+echo "PIVERS=$PIVERS"
+echo "USESYSTEMD=$USESYSTEMD"
+
+echo "LIBDIRSUFFIX=$LIBDIRSUFFIX"
+echo "BUILDSCRIPTS=$BUILDSCRIPTS"
+echo "OUTPUT=$OUTPUT"
+echo "SOURCEARCHIVES=$SOURCEARCHIVES"
+echo "PKGARCHIVES=$PKGARCHIVES"
+echo "COMPILEAT=$COMPILEAT"
+echo "SCRIPTLOG=$SCRIPTLOG"
+echo "CHECKETC=$CHECKETC"
+echo
+echo "CONFIGOPTIONS=$CONFIGOPTIONS"
+echo "MESONCONFIGOPTIONS=$MESONCONFIGOPTIONS"
+echo
+echo "MAKEFLAGS=$MAKEFLAGS"
+echo
+echo "XORG_PREFIX=$XORG_PREFIX"
+echo "XORG_CONFIG=$XORG_CONFIG"
+echo
+echo "JAVA_HOME=$JAVA_HOME"
+echo "QT5PREFIX=$QT5PREFIX"
+
+echo "--------"
+
+SUMMARY="n"
+readWithDefault "SUMMARY"  "Write Config Files?"
+
+if [ $SUMMARY = "n" ];then
+	exit 1
+fi
+
+cat > /etc/ypkg.rc << EOF
+yversion=$yversion
+PIBUILD=$PIBUILD
+PIVERS=$PIVERS
+USESYSTEMD=$USESYSTEMD
+LIBDIRSUFFIX=$LIBDIRSUFFIX
+BUILDSCRIPTS="$BUILDSCRIPTS"
+OUTPUT="$OUTPUT"
+SOURCEARCHIVES="$SOURCEARCHIVES"
+PKGARCHIVES="$PKGARCHIVES"
+COMPILEAT=$COMPILEAT
+SCRIPTLOG=$SCRIPTLOG
+CHECKETC=$CHECKETC
+
+CONFIGOPTIONS="$CONFIGOPTIONS"
+MESONCONFIGOPTIONS="$MESONCONFIGOPTIONS"
+
+MAKEFLAGS="$MAKEFLAGS"
+
+XORG_PREFIX="$XORG_PREFIX"
+XORG_CONFIG="$XORG_CONFIG"
+
+JAVA_HOME=$JAVA_HOME
+
+QT5PREFIX=$QT5PREFIX
+QT5DIR=\$QT5PREFIX/lib64/qt5
+CMAKE_INSTALL_PREFIX=\$QT5PREFIX
+CMAKE_PREFIX_PATH=\$QT5DIR/cmake
+PATH="\${QT5DIR}:\${PATH}"
+
+DEFLIBSUFFIX=\$LIBDIRSUFFIX
+DEFUSEQT5=TRUE
+DEFCMAKELINKERFLAGS="-L\$QT5DIR"
+
+CMAKEINSTALLPREFIX="-DCMAKE_INSTALL_PREFIX=\$CMAKE_INSTALL_PREFIX"
+CMAKEPREFIXPATH="-DCMAKE_PREFIX_PATH=\$CMAKE_PREFIX_PATH"
+CMAKELIBDIRSUFFIX="-DLIB_SUFFIX=\$DEFLIBSUFFIX"
+CMAKEUSEQT5="-DUSE_QT5=\$DEFUSEQT5"
+CMAKELDFLAGS="-DCMAKE_EXE_LINKER_FLAGS=\$DEFCMAKELINKERFLAGS"
+
+export CMAKE_PREFIX_PATH
+export CMAKE_INSTALL_PREFIX
+export PATH
+export QT5DIR
+
+EOF
+

@@ -1,0 +1,65 @@
+#!/bin/bash
+
+PKGNAME="yinstal"
+TARNAME="$PKGNAME"
+VERSION="0.4.23"
+BUILD=${BUILD:-1}
+SECTION="ADMIN"
+SUFFIX="YAPS"
+TARBALL="${TARNAME}-${VERSION}.zip"
+HELPER=finddepends
+HELPERCODE=main.cpp
+FUNCTIONS=yapi
+PROGRAM=yaps
+MANPAGE=${PROGRAM}.1
+RCFILE=yaps.rc
+DOWHAT=${1:-"build"}
+
+if [ "X$BOOTSTRAP" != "X" ];then
+	pushd "${TARNAME}-master"
+		make install||true
+		. /usr/share/yinstal/yapi
+		PKG="${OUTPUT}/${PKGNAME}"
+		rm -rf "$PKG" || true
+		mkdir -p "$PKG"
+		make install DESTDIR=$PKG
+		checketc "$PKG"
+		packageclean "$PKG"
+		pushd "$PKG"
+			yaps -n "$PKGNAME" -p "$VERSION" -d $SECTION -b $BUILD -s $SUFFIX -m
+		popd
+		yaps "${PKGARCHIVES}/${SECTION}/${PKGNAME}-${VERSION}-${BUILD}_${SECTION}_${SUFFIX}.tar.gz" -i
+		hash -r
+		SIMPLEUPDATE=1 yaps -U
+	popd
+else
+
+	rm -r "${TARNAME}-master"||true
+	wget -c --no-check-certificate "https://github.com/KeithDHedger/$PKGNAME/archive/master.zip" -O $TARBALL||true
+
+	unzip "$TARBALL"
+	pushd "${TARNAME}-master"
+		. ./$FUNCTIONS
+		PKG="${OUTPUT}/${PKGNAME}"
+		rm -rf "$PKG" || true
+		mkdir -p "$PKG"
+		make install DESTDIR=$PKG
+	popd
+
+	mkdir -vp "${SOURCEARCHIVES}/${SECTION}" "${OUTPUT}/${SECTION}" 2>/dev/null
+	mv "$TARBALL" "${SOURCEARCHIVES}/${SECTION}"
+
+	checketc "$PKG"
+	packageclean "$PKG"
+
+	pushd "$PKG"
+		yaps -n "$PKGNAME" -p "$VERSION" -d $SECTION -b $BUILD -s $SUFFIX -m
+	popd
+
+	yaps "^${PKGNAME}-[0-9][0-9]*" "${PKGARCHIVES}/${SECTION}/${PKGNAME}-${VERSION}-${BUILD}_${SECTION}_${SUFFIX}.tar.gz" -u
+	hash -r
+	SIMPLEUPDATE=0 yaps -U
+
+	rm -r "${TARNAME}-master"
+fi
+rm -r "$PKG"

@@ -1,0 +1,59 @@
+0.4.23
+Tweaked documentation.
+Added perl to template.
+Minor update to template file for systemd usage.
+Prevented make install overwriting existing config file.
+Removed lfspkguser code.
+Tweaks for Pi4.
+Running  lfspkg --setup now needs to be run as root.
+Tweaks to defaults in ypkg.rc and ypkgsetup.
+Removed loading of local rc file, now only uses global rc ie:/etc/ypkg.rc
+Extractarchive function will now guess whether to use tar -x or unzip, can be overridden.
+
+0.4.22
+Added 'meson' option to templates.
+Fixed bug when entering options with spaces in ypkgsetup.
+Added MESONCONFIGOPTIONS to ypkgsetup.
+Set pasissive mode on links ftp in findArchive function.
+The pkgclean function now removes the /tmp folder from the package.
+Added basic sanity check in yapi.
+Fixed building as normal user.
+Changed website/email.
+Made version for 8.2 backward compatable with older scripts.
+Split DB search into "-S" exact search ( regex ) and "-Z" fuzzy search ( ".*regex.*" ).
+Setting env var FORCEDOWNLOAD=1 will force download a new source archive.
+Auto added ".*" to front and back of search arg to -S.
+Option -t now takes an argument configure,cmake or python[2|3].
+Fixed bug in gettar func.
+Fixed hard coded lib suffix in LFSSetUp.
+Now only updates db once at end of installing multiple pkgs.
+Fixed search for basic search for installed pkg.
+Removed ':' from end of search data output.
+Improved DB search -S now takes argument.
+Updated template creation.
+Fixed missing info, post/pre install files. 
+Fixed some local vars not being inited.
+Fixed minor error text.
+Tweaked checketc function.
+ALlowed scripts to overide loading of .rc files in LFSFunction.
+Search option now accepts multiple args ( 1- 6 ) to print : seperated list.
+Updated manpage.
+Functions file now tries to include .rc file from etc THEN local.
+Now copies default ypkg.rc to /etc/ instead of /usr/share/yinstal.
+Extra options.
+
+0.4.21
+Updating DB will now download index files as needed,setting SIMPLEUPDATE=0 will as before force download index files. 
+Minor changes to example rc file and template for cmake builds.
+Fixed minor bug in generated ypkg.rc.
+Added defaults to ypkgsetup script
+No longer include any rc file in /etc
+Example ypkg.rc file now in /usr/share/yinstal
+Removed installation of /etc/ypkg.rc
+Adjusted makefiles.
+Added -Q option to lfspkg to run setup scriptLog
+Added ypkgsetup script
+Added Changelog!
+
+0.4.20
+...
